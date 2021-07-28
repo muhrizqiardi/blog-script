@@ -3,15 +3,16 @@ import sys
 import argparse
 import json
 
-print('Ran with arguments: ', sys.argv)
-
 # Command Line Arguments
 new_post_parser = argparse.ArgumentParser(description="➕ Create a new post directly")
 new_post_parser.add_argument(
-  'Title',
+  'post_title',
   metavar="post_title",
+  type=str,
   help="Title of the new post"
 )
+args = new_post_parser.parse_args()
+print(args.post_title)
 
 # Functions
 def input_with_default(default_string, arg = ""):
