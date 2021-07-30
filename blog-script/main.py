@@ -3,12 +3,14 @@ from slugify import slugify
 from getpass import getuser
 from generate_cover import generate_cover
 from config_writer import config_writer
-import subprocess
-import argparse
-import datetime
+from open_external import open_external
+from list_posts import list_posts
 import os
 import sys
 import json
+import argparse
+import datetime
+import subprocess
 
 config = {}
 
@@ -32,8 +34,9 @@ def init_argparse():
   )
 
   parser.add_argument('--about', action="store_true", help="About the program")
-  parser.add_argument('-i', '--info', action="store_true", help="Info about the blog")
-  parser.add_argument('-l', '--list', action="store_true", help="List all the post")
+  parser.add_argument('--info', action="store_true", help="Info about the blog")
+  parser.add_argument('--list', action="store_true", help="List all the post")
+  parser.add_argument('--publish', action="store_true", help="Commit and push posts to the directory")
 
   # For creating a post
   parser.add_argument('--create', action="store_true", help="Create a post")
@@ -45,7 +48,9 @@ def init_argparse():
   parser.add_argument('-gc', '--generate-cover', action="store_true", help="Generate a post's cover image")
 
   # For editing a post
-  parser.add_argument('--edit', type=str, help="Edit a post based on provided slug")
+  parser.add_argument('--edit', action="store_true", help="Edit a post based on provided slug")
+  parser.add_argument('-s', '--slug', type=str, help="Slug of a post")
+
 
   args = parser.parse_args()
   return args
@@ -77,14 +82,8 @@ def create_post(parent_path, posts_path, assets_path, post_field):
     print(f"📝 Location of markdown file: {bcolors.OKCYAN}\"{os.path.normpath(new_post_absolute_path)}\"{bcolors.ENDC}")
     print(f"📝 Location of assets folder: {bcolors.OKCYAN}\"{os.path.normpath(new_assets_absolute_path)}\"{bcolors.ENDC}")
 
-    try:
-      subprocess.Popen(["powershell.exe",
-      "start", 
-      f'"{new_post_absolute_path}"'],
-      stdout=sys.stdout).communicate()
-
-    except Exception as e:
-      print(f'{bcolors.FAIL}⚠ An error happened: {e}{bcolors.ENDC}')
+    print(f"{bcolors.OKGREEN}🏃‍♀️ Opening in external editor...{bcolors.ENDC}")
+    open_external(new_post_absolute_path)
 
   except FileExistsError: 
     print(f'{bcolors.FAIL}⚠ Post already existed{bcolors.ENDC}')
@@ -126,6 +125,19 @@ def main():
   except Exception as e: 
     print(f"{bcolors.FAIL}⚠ An error happened: {e}{bcolors.ENDC}")
 
+  if args.publish: 
+    print(f"{bcolors.OKGREEN}🐙 Creating a git commit...{bcolors.ENDC}")
+    try:
+      os.chdir(config["parent-path"])
+      os.system('git checkout blog --no-guess')
+      os.system('git add -A')
+      os.system('git commit -m "published post(s)"')
+      
+      print(f"{bcolors.OKGREEN}☁ Pushing to remote...{bcolors.ENDC}")
+      os.system('git push')
+
+    except Exception as e:
+      print(f"{bcolors.FAIL}⚠ An error happened while publishing: {e}{bcolors.ENDC}")
 
 
   if args.info:
@@ -142,6 +154,13 @@ def main():
 
   if args.list:
     print(f"✍ Listing all posts:")
+    list_posts(f"{config['parent-path']}{config['posts-path']}")
+
+  if args.edit and args.slug:
+    post_path = f"{config['parent-path']}{config['posts-path']}/{args.slug}.md"
+    print(f"{bcolors.OKGREEN}🏃 Opening in {args.slug}.md external editor...{bcolors.ENDC}")
+
+    open_external(post_path)
 
   if args.create and args.title: 
 
